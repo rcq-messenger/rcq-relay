@@ -163,6 +163,7 @@ if [ -z "${RCQ_NO_REGISTER:-}" ]; then
 import os, json, time, base64, urllib.request, urllib.error
 try:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography.hazmat.primitives import serialization
 except Exception:
     raise SystemExit("   (python3-cryptography missing — register later with broker-register.py)")
 opk = os.environ["OPKEY"]
@@ -170,13 +171,13 @@ if os.path.exists(opk):
     key = Ed25519PrivateKey.from_private_bytes(base64.b64decode(open(opk).read().strip()))
 else:
     key = Ed25519PrivateKey.generate()
-    open(opk, "w").write(base64.b64encode(key.private_bytes_raw()).decode()); os.chmod(opk, 0o600)
+    open(opk, "w").write(base64.b64encode(key.private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption())).decode()); os.chmod(opk, 0o600)
 desc = {"proto": "vless", "server": os.environ["SERVER"], "port": int(os.environ["PORT"]),
         "sni": os.environ["SNI"], "uuid": os.environ["UUID"], "pbk": os.environ["PBK"],
         "sid": os.environ["SID"], "flow": "xtls-rprx-vision"}
 ts = int(time.time())
 signed = json.dumps({"descriptor": desc, "ts": ts}, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
-body = {"descriptor": desc, "key": base64.b64encode(key.public_key().public_bytes_raw()).decode(),
+body = {"descriptor": desc, "key": base64.b64encode(key.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)).decode(),
         "sig": base64.b64encode(key.sign(signed)).decode(), "ts": ts}
 req = urllib.request.Request(os.environ["RCQ_BROKER"] + "/broker/register",
         data=json.dumps(body).encode(), headers={"Content-Type": "application/json"}, method="POST")
