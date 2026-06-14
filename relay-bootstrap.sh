@@ -167,9 +167,13 @@ try:
 except Exception:
     raise SystemExit("   (python3-cryptography missing — register later with broker-register.py)")
 opk = os.environ["OPKEY"]
+key = None
 if os.path.exists(opk):
-    key = Ed25519PrivateKey.from_private_bytes(base64.b64decode(open(opk).read().strip()))
-else:
+    try:
+        key = Ed25519PrivateKey.from_private_bytes(base64.b64decode(open(opk).read().strip()))
+    except Exception:
+        key = None  # empty/corrupt key file (e.g. left behind by an earlier failed run) -> regenerate
+if key is None:
     key = Ed25519PrivateKey.generate()
     open(opk, "w").write(base64.b64encode(key.private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption())).decode()); os.chmod(opk, 0o600)
 desc = {"proto": "vless", "server": os.environ["SERVER"], "port": int(os.environ["PORT"]),
