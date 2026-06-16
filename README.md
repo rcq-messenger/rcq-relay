@@ -61,5 +61,46 @@ is simply not handed out, you don't need to babysit it.
 - A dead or unreachable relay is simply not handed out, you don't need to babysit
   it, but keeping it up helps people.
 
+## Where to run it — region matters
+
+A relay's value depends on **where** it sits relative to the people it helps.
+
+- **Inside the censored country (e.g. a relay in Russia).** This is the most
+  valuable kind. A blocked user reaches *you* over a short in-country hop that
+  looks like ordinary HTTPS to a no-name host, far less conspicuous than a
+  connection straight to a foreign VPN endpoint. **If you're in RF and run a
+  relay, you directly help other people in RF get through.** In onion mode a
+  domestic relay is the ideal entry (sees the user's IP, never the destination)
+  or exit hop.
+- **Outside the country.** Useful as the border-crossing hop and as an onion
+  **exit** (sees the destination server, never the user's IP). Lower personal
+  risk to run, but it does less to disguise that a domestic user is reaching
+  *something* abroad.
+
+**Onion (2-hop) splits the trust by design.** RCQ chains an ENTRY relay and an
+EXIT relay so no single relay sees both ends: the entry sees `your IP → forward
+to the exit` (it can't read the destination, it's sealed inside the exit's
+tunnel); the exit sees `entry-IP → destination server` (never your IP). To your
+relay, both single-hop and onion traffic just look like normal VLESS connections,
+you can't even tell which role you're playing. So pick a region you're
+comfortable in, and know that more **domestic** relays are what move the needle.
+
+## Before you run one
+
+- **No logs, nothing to hand over.** The relay keeps no traffic logs; the broker
+  stores only your relay's public key + enabled/disabled state, never who
+  registered it. Your VPS provider / upstream ISP still sees your box's traffic,
+  so pick a provider you trust.
+- **Jurisdiction.** A domestic relay carries more legal/physical risk to *you*
+  (the same adversary your users face can reach your box). Run one where you're
+  comfortable; if unsure, a foreign relay is lower-risk to operate.
+- **Abuse / DoS.** Your relay has no per-IP limiting of its own; clients back off
+  and fail over, but a flood can still hit your uplink, so use your provider's
+  DDoS protection or cap bandwidth if needed.
+- **It's disposable.** Seized, or just done? Delete
+  `/etc/sing-box/rcq-operator-ed25519.b64` and redeploy fresh (or just stop, the
+  canary drops a dead relay from rotation automatically). One relay dying costs
+  the network nothing, that's the point.
+
 Questions or a relay you want promoted to the trusted tier? Reach us in-app at
 RCQ **#911** or `security@rcq.app`.
