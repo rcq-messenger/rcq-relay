@@ -77,6 +77,19 @@ for _d in "${_RCQ_ISL[@]}"; do
     [ -n "$_d" ] && ISLAND_JSON="$ISLAND_JSON, \"$_d\""
 done
 
+# IP allow-list: the RCQ islands (flagship + is2, in case a request arrives as an
+# IP not a hostname) PLUS the trusted relay fleet. Onion routing chains relay to
+# relay (the entry forwards to the exit relay's IP), so without the fleet IPs the
+# lockdown would block onion. These are the signed-config trusted VLESS relays;
+# update when the fleet changes, or override with RCQ_FLEET_IPS="a.b.c.d,e.f.g.h".
+FLEET_DEFAULT="45.151.101.221,165.22.90.214,129.159.143.135,35.238.53.96,47.129.249.170"
+IPCIDR_JSON='"165.232.69.229/32", "165.22.95.218/32"'
+IFS=',' read -ra _FLEET <<< "${RCQ_FLEET_IPS:-$FLEET_DEFAULT}"
+for _ip in "${_FLEET[@]}"; do
+    _ip="$(printf '%s' "$_ip" | tr -d '[:space:]')"
+    [ -n "$_ip" ] && IPCIDR_JSON="$IPCIDR_JSON, \"$_ip/32\""
+done
+
 echo "==> Writing /etc/sing-box/config.json"
 mkdir -p /etc/sing-box
 cat > /etc/sing-box/config.json <<EOF
@@ -113,7 +126,7 @@ cat > /etc/sing-box/config.json <<EOF
     "rules": [
       { "domain_suffix": [ $ISLAND_JSON ], "outbound": "direct" },
       { "domain": ["$SNI"], "outbound": "direct" },
-      { "ip_cidr": ["165.232.69.229/32", "165.22.95.218/32"], "outbound": "direct" },
+      { "ip_cidr": [ $IPCIDR_JSON ], "outbound": "direct" },
       { "action": "reject" }
     ]
   }

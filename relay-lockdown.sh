@@ -26,6 +26,10 @@ if command -v apt-get >/dev/null 2>&1; then
     apt-get install -y --only-upgrade sing-box >/dev/null 2>&1 || true
 fi
 
+# Trusted relay fleet (onion hops): onion chains relay -> relay, so the lockdown
+# must allow forwarding to these IPs or onion breaks. Signed-config trusted VLESS
+# relays; override with RCQ_FLEET_IPS="a.b.c.d,e.f.g.h".
+RCQ_FLEET_IPS="${RCQ_FLEET_IPS:-45.151.101.221,165.22.90.214,129.159.143.135,35.238.53.96,47.129.249.170}" \
 RCQ_ISLANDS="${RCQ_ISLANDS:-}" python3 - "$CONF" <<'PY'
 import json, os, sys
 conf = sys.argv[1]
@@ -38,10 +42,16 @@ for d in os.environ.get("RCQ_ISLANDS", "").split(","):
     d = d.strip()
     if d:
         suffixes.append(d)
+# Island IPs (request may arrive as an IP) + the trusted relay fleet (onion hops).
+ipcidr = ["165.232.69.229/32", "165.22.95.218/32"]
+for ip in os.environ.get("RCQ_FLEET_IPS", "").split(","):
+    ip = ip.strip()
+    if ip:
+        ipcidr.append(ip + "/32")
 rules = [{"domain_suffix": suffixes, "outbound": "direct"}]
 if sni:
     rules.append({"domain": [sni], "outbound": "direct"})
-rules.append({"ip_cidr": ["165.232.69.229/32", "165.22.95.218/32"], "outbound": "direct"})
+rules.append({"ip_cidr": ipcidr, "outbound": "direct"})
 rules.append({"action": "reject"})   # default-deny everything else (no open proxy)
 c.setdefault("outbounds", [{"type": "direct", "tag": "direct"}])
 c["route"] = {"rules": rules}
