@@ -147,6 +147,17 @@ echo "    nc -z -v -w 5 $PUBLIC_IP $PORT"
 echo "    curl -kI https://$PUBLIC_IP/   # expect HTTP 400 (Reality masquerade)"
 echo "===================================================="
 
+# Shareable token — paste it into an RCQ group/chat and members tap Add. This is
+# the censorship-resistant social distribution path: it works even if the broker
+# auto-registration below is blocked from THIS box (e.g. domestic hosting whose
+# egress to api.rcq.app is filtered), and it reaches a whole community group at
+# once. Matches the rcq-relay:// format the clients parse (ContactRelayStore).
+SHARE_TOKEN="rcq-relay://vless?s=${PUBLIC_IP}&p=${PORT}&sni=${SNI}&id=${UUID}&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&fl=xtls-rprx-vision"
+echo
+echo "  SHARE THIS RELAY directly (paste into an RCQ group/chat; members tap Add):"
+echo "    $SHARE_TOKEN"
+echo "===================================================="
+
 # ── гидра: self-register with the RCQ broker (no manual approval needed) ──────
 # The relay signs a descriptor with a fresh, persisted operator key and POSTs it
 # to the broker. Users then get this relay distributed to them automatically.
