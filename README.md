@@ -40,10 +40,28 @@ When it finishes it prints your relay's parameters and confirms registration.
 - `RCQ_NO_REGISTER=1`, set up the relay but **don't** auto-register (you'll
   register manually later).
 - `RCQ_BROKER=https://api.rcq.app`, the broker to register with (default).
+- `RCQ_ISLANDS=island.example.com,island2.example.com`, extra island hostnames
+  to allow if you self-host. The relay only forwards to RCQ (every `*.rcq.app`
+  plus anything you list here) — see **Not an open proxy** below.
 
 Re-running the script on the same box refreshes the **same** registration (it
 keeps your operator key at `/etc/sing-box/rcq-operator-ed25519.b64`, back it up
 if you want to move the relay later).
+
+## Not an open proxy
+Your relay forwards traffic ONLY to RCQ destinations (the islands). It is **not**
+a general internet proxy: its credentials are shared widely (the broker hands
+them out, users paste them into group chats), so without this lock-down anyone
+could point a normal VLESS client at your relay and surf the open web — VK,
+torrents, anything — from **your** IP, leaving you holding the abuse. The relay
+rejects every destination that isn't an RCQ island.
+
+**Already ran an older version of this script?** Those relays forward anywhere —
+lock them down in place (keeps your keys, so shared tokens keep working):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rcq-messenger/rcq-relay/main/relay-lockdown.sh | sudo bash
+```
 
 ## How your relay reaches users
 RCQ doesn't publish the whole relay list publicly (a censor would just block them

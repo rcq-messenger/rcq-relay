@@ -61,6 +61,21 @@ if [[ -z "$PRIVATE_KEY" || -z "$PUBLIC_KEY" || -z "$UUID" || -z "$SHORT_ID" ]]; 
     exit 1
 fi
 
+# Outbound is LOCKED to RCQ destinations only — the relay must NOT be an open
+# proxy. Without this, anyone with the relay's credentials (they're handed out
+# by the broker + shared in chats) can point a normal VLESS client at it and
+# surf the open internet from YOUR IP (VK, torrents, whatever) — the operator
+# eats the abuse/legal exposure. The allow-list is the RCQ islands (every
+# *.rcq.app + any you add via RCQ_ISLANDS) plus this relay's own masquerade host;
+# everything else is rejected. Self-hosting your own island? Add its hostname:
+#   RCQ_ISLANDS="island.example.com,island2.example.com" curl -fsSL …|bash
+ISLAND_JSON='"rcq.app"'
+IFS=',' read -ra _RCQ_ISL <<< "${RCQ_ISLANDS:-}"
+for _d in "${_RCQ_ISL[@]}"; do
+    _d="$(printf '%s' "$_d" | tr -d '[:space:]')"
+    [ -n "$_d" ] && ISLAND_JSON="$ISLAND_JSON, \"$_d\""
+done
+
 echo "==> Writing /etc/sing-box/config.json"
 mkdir -p /etc/sing-box
 cat > /etc/sing-box/config.json <<EOF
@@ -92,7 +107,15 @@ cat > /etc/sing-box/config.json <<EOF
   ],
   "outbounds": [
     { "type": "direct", "tag": "direct" }
-  ]
+  ],
+  "route": {
+    "rules": [
+      { "domain_suffix": [ $ISLAND_JSON ], "outbound": "direct" },
+      { "domain": ["$SNI"], "outbound": "direct" },
+      { "ip_cidr": ["165.232.69.229/32", "165.22.95.218/32"], "outbound": "direct" },
+      { "action": "reject" }
+    ]
+  }
 }
 EOF
 
@@ -158,6 +181,10 @@ echo "        forwards to the genuine $SNI and you get ITS response (e.g. 400/20
 echo "        Plain 'curl https://IP/' tests port 443, NOT your relay port — ignore it."
 echo "  In journalctl, 'REALITY: processed invalid connection' is NORMAL — it's the"
 echo "  relay rejecting scanners/your router/curl that don't speak the RCQ handshake."
+echo
+echo "  This relay forwards ONLY to RCQ (every *.rcq.app island"${RCQ_ISLANDS:+", $RCQ_ISLANDS"}") — it is"
+echo "  NOT an open internet proxy, so its credentials can't be abused to surf the"
+echo "  open web (VK, torrents, …) from your IP."
 echo "===================================================="
 
 # Shareable token — paste it into an RCQ group/chat and members tap Add. This is
