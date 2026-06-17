@@ -11,7 +11,7 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/rcq-messenger/rcq-relay/main/relay-lockdown.sh | sudo bash
 #   # self-hosting your own island? allow its hostname too:
-#   RCQ_ISLANDS="island.example.com" curl -fsSL …/relay-lockdown.sh | sudo bash
+#   curl -fsSL …/relay-lockdown.sh | sudo RCQ_ISLANDS="island.example.com" bash
 #
 # Safe: the new config is validated with `sing-box check` BEFORE it replaces the
 # live one. If validation fails, nothing changes and the relay keeps running.

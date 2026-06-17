@@ -34,6 +34,13 @@ curl -fsSL https://raw.githubusercontent.com/rcq-messenger/rcq-relay/main/relay-
 When it finishes it prints your relay's parameters and confirms registration.
 
 ### Options
+Pass these on the **bash** side of the pipe (a variable before `curl` never reaches the script). For example, to run on a non-443 port:
+```
+curl -fsSL https://raw.githubusercontent.com/rcq-messenger/rcq-relay/main/relay-bootstrap.sh | sudo RCQ_RELAY_PORT=8443 bash
+```
+- `RCQ_RELAY_PORT=443`, the port your relay listens on (default 443). Use another
+  port if 443 is taken or you can only forward a different one (still works, 443
+  is just the most innocuous).
 - `RCQ_RELAY_SNI=www.yandex.ru`, the domain your relay impersonates (Reality).
   Pick a big, locally-popular HTTPS site. Default: `www.microsoft.com`. For a
   relay inside Russia, an intra-RF site like `www.yandex.ru` looks most innocuous.

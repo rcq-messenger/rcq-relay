@@ -68,7 +68,8 @@ fi
 # eats the abuse/legal exposure. The allow-list is the RCQ islands (every
 # *.rcq.app + any you add via RCQ_ISLANDS) plus this relay's own masquerade host;
 # everything else is rejected. Self-hosting your own island? Add its hostname:
-#   RCQ_ISLANDS="island.example.com,island2.example.com" curl -fsSL …|bash
+#   curl -fsSL …/relay-bootstrap.sh | sudo RCQ_ISLANDS="island.example.com,island2.example.com" bash
+#   (env vars go on the BASH side of the pipe; before `curl` they never reach the script)
 ISLAND_JSON='"rcq.app"'
 IFS=',' read -ra _RCQ_ISL <<< "${RCQ_ISLANDS:-}"
 for _d in "${_RCQ_ISL[@]}"; do
