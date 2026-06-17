@@ -129,12 +129,19 @@ if ! systemctl is-active --quiet sing-box; then
 fi
 
 PUBLIC_IP=$(curl -s4 ifconfig.me || curl -s4 ipv4.icanhazip.com || hostname -I | awk '{print $1}')
+# Address that clients + the broker's liveness canary dial. Defaults to the
+# detected public IP. For a HOME / DYNAMIC-IP relay (DDNS) set
+# RCQ_RELAY_HOST=your.ddns.example so the relay registers the HOSTNAME — the
+# broker re-resolves it at probe time, so the registration survives IP changes
+# (an IP registration silently goes stale and stops being served when the IP
+# rotates). Port-forward your relay PORT on the router to this box.
+SERVER_ADDR="${RCQ_RELAY_HOST:-$PUBLIC_IP}"
 
 echo
 echo "===================================================="
 echo "  RELAY READY — your relay parameters"
 echo "===================================================="
-echo "  server      $PUBLIC_IP"
+echo "  server      $SERVER_ADDR"
 echo "  port        $PORT"
 echo "  uuid        $UUID"
 echo "  flow        xtls-rprx-vision"
@@ -142,9 +149,15 @@ echo "  sni         $SNI"
 echo "  public_key  $PUBLIC_KEY"
 echo "  short_id    $SHORT_ID"
 echo
-echo "  Smoke test from your Mac:"
-echo "    nc -z -v -w 5 $PUBLIC_IP $PORT"
-echo "    curl -kI https://$PUBLIC_IP/   # expect HTTP 400 (Reality masquerade)"
+echo "  Smoke test — run it from OUTSIDE your LAN (e.g. your phone on mobile data,"
+echo "  not the same network as the relay; home NAT often can't hairpin to itself):"
+echo "    nc -z -v -w 5 $SERVER_ADDR $PORT          # port reachable?"
+echo "    curl -kI --resolve $SNI:$PORT:$PUBLIC_IP https://$SNI:$PORT/"
+echo "      ^ hits the relay on its REAL port with the masquerade SNI, so REALITY"
+echo "        forwards to the genuine $SNI and you get ITS response (e.g. 400/200)."
+echo "        Plain 'curl https://IP/' tests port 443, NOT your relay port — ignore it."
+echo "  In journalctl, 'REALITY: processed invalid connection' is NORMAL — it's the"
+echo "  relay rejecting scanners/your router/curl that don't speak the RCQ handshake."
 echo "===================================================="
 
 # Shareable token — paste it into an RCQ group/chat and members tap Add. This is
@@ -152,7 +165,7 @@ echo "===================================================="
 # auto-registration below is blocked from THIS box (e.g. domestic hosting whose
 # egress to api.rcq.app is filtered), and it reaches a whole community group at
 # once. Matches the rcq-relay:// format the clients parse (ContactRelayStore).
-SHARE_TOKEN="rcq-relay://vless?s=${PUBLIC_IP}&p=${PORT}&sni=${SNI}&id=${UUID}&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&fl=xtls-rprx-vision"
+SHARE_TOKEN="rcq-relay://vless?s=${SERVER_ADDR}&p=${PORT}&sni=${SNI}&id=${UUID}&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&fl=xtls-rprx-vision"
 echo
 echo "  SHARE THIS RELAY directly (paste into an RCQ group/chat; members tap Add):"
 echo "    $SHARE_TOKEN"
@@ -169,7 +182,7 @@ if [ -z "${RCQ_NO_REGISTER:-}" ]; then
     command -v python3 >/dev/null 2>&1 || apt-get install -y python3 >/dev/null 2>&1 || true
     python3 -c "import cryptography" 2>/dev/null || apt-get install -y python3-cryptography >/dev/null 2>&1 || true
     OPKEY=/etc/sing-box/rcq-operator-ed25519.b64   # persisted: a re-run refreshes the SAME registration
-    RCQ_BROKER="$BROKER" OPKEY="$OPKEY" SERVER="$PUBLIC_IP" PORT="$PORT" SNI="$SNI" \
+    RCQ_BROKER="$BROKER" OPKEY="$OPKEY" SERVER="$SERVER_ADDR" PORT="$PORT" SNI="$SNI" \
     UUID="$UUID" PBK="$PUBLIC_KEY" SID="$SHORT_ID" python3 - <<'PYEOF'
 import os, json, time, base64, urllib.request, urllib.error
 try:
